@@ -144,7 +144,9 @@ function town() {
       const wall = pick(walls);
       const roofKind = rnd();
       out += `<rect x="${f(x)}" y="${f(base - h)}" width="${f(w)}" height="${f(h + 30)}" fill="${wall}"/>`;
-      out += `<rect x="${f(x + w * 0.62)}" y="${f(base - h)}" width="${f(w * 0.38)}" height="${f(h + 30)}" fill="#c98a72" opacity="0.28"/>`;
+      // the sun sits low on the right: shade the left face, warm the right edge
+      out += `<rect x="${f(x)}" y="${f(base - h)}" width="${f(w * 0.36)}" height="${f(h + 30)}" fill="#9a6a8a" opacity="0.22"/>`;
+      out += `<rect x="${f(x + w - 3)}" y="${f(base - h)}" width="3" height="${f(h + 30)}" fill="#ffd08a" opacity="0.7"/>`;
       if (roofKind < 0.3) {
         // Vellamora's own roof: a scallop-shell fan with ribs, in coral or sea-glass green
         const rr = w / 2 + 2;
@@ -242,6 +244,9 @@ function lighthouse() {
       <rect x="${cx - 100}" y="${top - 10}" width="200" height="${base - top + 20}" fill="url(#towerShade)"/>
     </g>
     <path d="${outline}" fill="none" stroke="#7a3b33" stroke-width="2" opacity="0.5"/>
+    <!-- the conch's flared lip and pink mouth at the foot of the tower: this is a shell, not a striped cone -->
+    <path d="M${cx + 40} ${base} C${cx + 70} ${base - 4} ${cx + 104} ${base - 30} ${cx + 100} ${base - 78} C${cx + 96} ${base - 116} ${cx + 70} ${base - 140} ${cx + 52} ${base - 150} C${cx + 60} ${base - 110} ${cx + 66} ${base - 60} ${cx + 40} ${base} Z" fill="#fff0e2" stroke="#7a3b33" stroke-width="2" stroke-opacity="0.45"/>
+    <path d="M${cx + 46} ${base - 8} C${cx + 74} ${base - 18} ${cx + 90} ${base - 46} ${cx + 88} ${base - 80} C${cx + 86} ${base - 108} ${cx + 72} ${base - 126} ${cx + 58} ${base - 136} C${cx + 64} ${base - 100} ${cx + 64} ${base - 50} ${cx + 46} ${base - 8} Z" fill="url(#shellMouth)"/>
     ${wins}
     <path d="M${cx - 13} ${base} v-26 a13 13 0 0 1 26 0 v26 Z" fill="${C.navy}"/>
     <path d="M${cx - 9} ${base} v-24 a9 9 0 0 1 18 0 v24 Z" fill="#ffcf6b"/>
@@ -333,8 +338,9 @@ const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" 
   <defs>
     <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0" stop-color="${C.skyTop}"/>
-      <stop offset="0.5" stop-color="${C.skyMid}"/>
-      <stop offset="1" stop-color="${C.skyLow}"/>
+      <stop offset="0.45" stop-color="${C.skyMid}"/>
+      <stop offset="0.78" stop-color="${C.skyLow}"/>
+      <stop offset="1" stop-color="#ffc08f"/>
     </linearGradient>
     <radialGradient id="sunGlow">
       <stop offset="0" stop-color="#fff2c4" stop-opacity="0.95"/>
@@ -355,6 +361,10 @@ const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" 
       <stop offset="0.45" stop-color="#ffffff" stop-opacity="0"/>
       <stop offset="0.8" stop-color="#ffe2a8" stop-opacity="0.25"/>
       <stop offset="1" stop-color="#ffd27a" stop-opacity="0.45"/>
+    </linearGradient>
+    <linearGradient id="shellMouth" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ff9e8a"/>
+      <stop offset="1" stop-color="#ffd3b8"/>
     </linearGradient>
     <radialGradient id="lampGlow">
       <stop offset="0" stop-color="#fff7c8" stop-opacity="0.95"/>
