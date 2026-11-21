@@ -19,7 +19,13 @@ const M = 24; // cream paper margin around the printed picture
 const LAND_DY = 58; // the headland is drawn in its own coordinates and lowered by this much
 const HORIZON = 612 + LAND_DY;
 const WATERLINE = 712 + LAND_DY; // foot of the harbour wall: the mirror line for reflections
-const SUN_X = 800;
+const SUN_X = 915;
+// the Spiral Light stands on its own rock in the harbour mouth, drawn at TOWER_K times its sketch size
+const TOWER_X = 770;
+const TOWER_BASE = 806;
+const TOWER_K = 1.75;
+const BOAT_X = 330;
+const BOAT_Y = HORIZON + 156;
 
 const C = {
   paper: "#efe2c6",
@@ -192,27 +198,53 @@ function town() {
 function lighthouse() {
   const cx = 640;
   const base = 436;
-  const top = 258;
-  const prof = (t) => 64 * Math.pow(1 - t, 0.9) * (1 + 0.18 * Math.sin(t * Math.PI * 1.2)) + 14;
-  const N = 40;
+  const top = 200;
+  const prof = (t) => 60 * Math.pow(1 - t, 0.9) * (1 + 0.18 * Math.sin(t * Math.PI * 1.2)) + 13;
+  // a turret shell: each whorl swells at its shoulder and pinches at the suture; the right-hand
+  // sutures sit half a whorl higher than the left ones, so the whorls visibly wind upward
+  const whorls = 6;
+  const hgt = (base - top) / whorls;
+  const swell = (s) => 10 * Math.pow(Math.sin(Math.PI * (((s % 1) + 1) % 1)), 0.6);
+  const N = 120;
   const left = [];
   const right = [];
   for (let i = 0; i <= N; i++) {
     const t = i / N;
     const y = base - t * (base - top);
-    const ridge = 4 * Math.max(0, Math.sin(t * Math.PI * 6.0));
-    left.push([cx - prof(t) - ridge, y]);
-    right.push([cx + prof(t) + ridge * 0.6, y]);
+    const k = 1 - t * 0.6; // whorls get smaller toward the tip
+    left.push([cx - prof(t) - swell(t * whorls) * k, y]);
+    right.push([cx + prof(t) + swell(t * whorls - 0.5) * k, y]);
   }
   const outline = `M${left.map(([x, y]) => `${f(x)} ${f(y)}`).join(" L")} L${right.reverse().map(([x, y]) => `${f(x)} ${f(y)}`).join(" L")} Z`;
 
   let bands = "";
-  const whorls = 6;
-  for (let i = 0; i < whorls; i++) {
-    const hgt = (base - top) / whorls;
-    const y = base - (i + 0.15) * hgt;
-    bands += `<path d="M${cx - 90} ${f(y + 10)} C${cx - 30} ${f(y + 2)} ${cx + 30} ${f(y - hgt * 0.45)} ${cx + 90} ${f(y - hgt * 0.75)} L${cx + 90} ${f(y - hgt * 1.17)} C${cx + 30} ${f(y - hgt * 0.9)} ${cx - 30} ${f(y - hgt * 0.42)} ${cx - 90} ${f(y - hgt * 0.32)} Z" fill="${C.coral}"/>`;
-    bands += `<path d="M${cx - 90} ${f(y + 10)} C${cx - 30} ${f(y + 2)} ${cx + 30} ${f(y - hgt * 0.45)} ${cx + 90} ${f(y - hgt * 0.75)}" stroke="#ffe6cf" stroke-width="2.5" fill="none" opacity="0.9"/>`;
+  for (let i = -1; i < whorls + 1; i++) {
+    const yl = base - i * hgt; // suture on the left
+    const yr = base - (i + 0.5) * hgt; // the same suture on the right, half a whorl up
+    const bend = (a, b) => `C${cx - 30} ${f(a + (b - a) * 0.15)} ${cx + 30} ${f(a + (b - a) * 0.75)} ${cx + 100} ${f(b)}`;
+    // coral band on the upper part of each whorl, cream below it
+    bands += `<path d="M${cx - 100} ${f(yl - hgt * 0.42)} ${bend(yl - hgt * 0.42, yr - hgt * 0.42)} L${cx + 100} ${f(yr - hgt * 0.92)} C${cx + 30} ${f(yr - hgt * 0.92 + (yl - yr) * 0.25)} ${cx - 30} ${f(yl - hgt * 0.92 - (yl - yr) * 0.15)} ${cx - 100} ${f(yl - hgt * 0.92)} Z" fill="${C.coral}"/>`;
+    // the suture: a dark groove with a pale lip just above it
+    bands += `<path d="M${cx - 100} ${f(yl)} ${bend(yl, yr)}" stroke="#5a2c40" stroke-width="3" fill="none" opacity="0.7"/>`;
+    bands += `<path d="M${cx - 100} ${f(yl - 3)} ${bend(yl - 3, yr - 3)}" stroke="#fff0dc" stroke-width="2" fill="none" opacity="0.8"/>`;
+    // fine growth lines across the whorl
+    for (let g = 0; g < 14; g++) {
+      const gx = cx - 84 + g * 13;
+      const u = (gx - (cx - 100)) / 200;
+      const yb = yl + (yr - yl) * u;
+      bands += `<path d="M${f(gx)} ${f(yb - 4)} q3 ${f(-hgt * 0.4)} 0 ${f(-hgt * 0.85)}" stroke="#7a3b3b" stroke-width="0.9" fill="none" opacity="0.28"/>`;
+    }
+  }
+  // a knob on each whorl's shoulder, both sides
+  let knobs = "";
+  for (let i = 0; i < whorls - 1; i++) {
+    const k = 1 - (i / whorls) * 0.6;
+    for (const side of [-1, 1]) {
+      const t = (i + (side < 0 ? 0.5 : 1.0)) / whorls;
+      const y = base - t * (base - top);
+      const x = cx + side * (prof(t) + 9 * k);
+      knobs += `<path d="M${f(x)} ${f(y - 7 * k)} L${f(x + side * 11 * k)} ${f(y - 1)} L${f(x)} ${f(y + 6 * k)} Z" fill="${side < 0 ? "#b5838f" : "#ffd9b4"}" stroke="#4a2a40" stroke-width="1" stroke-opacity="0.5"/>`;
+    }
   }
   let wins = "";
   for (let i = 0; i < 5; i++) {
@@ -237,11 +269,7 @@ function lighthouse() {
     ${wins}
     <path d="M${cx - 13} ${base} v-26 a13 13 0 0 1 26 0 v26 Z" fill="#2a2340"/>
     <path d="M${cx - 9} ${base} v-24 a9 9 0 0 1 18 0 v24 Z" fill="${C.lamp}"/>
-    <!-- the conch's flared lip and pink mouth, catching the last of the sun -->
-    <g transform="translate(${cx} ${base}) scale(0.9 0.66) translate(${-cx} ${-base})">
-    <path d="M${cx + 40} ${base} C${cx + 70} ${base - 4} ${cx + 104} ${base - 30} ${cx + 100} ${base - 78} C${cx + 96} ${base - 116} ${cx + 70} ${base - 140} ${cx + 52} ${base - 150} C${cx + 60} ${base - 110} ${cx + 66} ${base - 60} ${cx + 40} ${base} Z" fill="#ffe6cc" stroke="#4a2a40" stroke-width="2" stroke-opacity="0.5"/>
-    <path d="M${cx + 46} ${base - 8} C${cx + 74} ${base - 18} ${cx + 90} ${base - 46} ${cx + 88} ${base - 80} C${cx + 86} ${base - 108} ${cx + 72} ${base - 126} ${cx + 58} ${base - 136} C${cx + 64} ${base - 100} ${cx + 64} ${base - 50} ${cx + 46} ${base - 8} Z" fill="url(#shellMouth)"/>
-    </g>
+    ${knobs}
     <rect x="${cx - 30}" y="${ly}" width="60" height="7" rx="2" fill="#2a2340"/>
     <rect x="${cx - 19}" y="${ly - 30}" width="38" height="30" fill="#fff3c0"/>
     <rect x="${cx - 19}" y="${ly - 30}" width="38" height="30" fill="none" stroke="#2a2340" stroke-width="3"/>
@@ -265,7 +293,26 @@ function boat(x, y, s) {
 
 // the scene above the water, drawn once and reused for its reflection
 function land() {
-  return `<g id="land" transform="translate(0 ${LAND_DY})">${headland()}${town()}${lighthouse()}</g>`;
+  return `<g id="land" transform="translate(0 ${LAND_DY})">${headland()}${town()}</g>`;
+}
+
+function tower() {
+  return `<g id="tower" transform="translate(${TOWER_X} ${TOWER_BASE}) scale(${TOWER_K}) translate(-640 -436)">${lighthouse()}</g>`;
+}
+
+// the dark rock the tower stands on, rim-lit by the sun behind it, with three lamp posts
+function islet() {
+  const x = TOWER_X;
+  const y = TOWER_BASE;
+  let lamps = "";
+  for (const [lx, h] of [[x - 150, 34], [x + 168, 30], [x - 104, 40]]) {
+    lamps += `<rect x="${lx - 1.5}" y="${y - h + 6}" width="3" height="${h}" fill="#231d38"/><circle cx="${lx}" cy="${y - h + 4}" r="16" fill="url(#winGlow)"/><circle cx="${lx}" cy="${y - h + 4}" r="4" fill="${C.lamp}"/>`;
+  }
+  return `
+  <path d="M${x - 200} ${y + 16} C${x - 180} ${y - 4} ${x - 150} ${y - 14} ${x - 110} ${y - 12} C${x - 60} ${y - 26} ${x + 60} ${y - 26} ${x + 120} ${y - 14} C${x + 160} ${y - 12} ${x + 190} ${y - 2} ${x + 214} ${y + 16} Z" fill="#2d2346"/>
+  <path d="M${x + 120} ${y - 14} C${x + 160} ${y - 12} ${x + 190} ${y - 2} ${x + 214} ${y + 16} L${x + 200} ${y + 16} C${x + 180} ${y + 2} ${x + 150} ${y - 6} ${x + 116} ${y - 8} Z" fill="${C.amber}" opacity="0.7"/>
+  <path d="M${x - 200} ${y + 16} L${x + 214} ${y + 16} L${x + 200} ${y + 22} L${x - 186} ${y + 22} Z" fill="#ffd9a6" opacity="0.35"/>
+  ${lamps}`;
 }
 
 function reflection() {
@@ -282,8 +329,11 @@ function reflection() {
       <use href="#land" transform="translate(0 ${2 * WATERLINE}) scale(1 -1)"/>
     </g>
   </g>
+  <g opacity="0.5" filter="url(#ripple)">
+    <use href="#tower" transform="translate(0 ${2 * (TOWER_BASE + 16)}) scale(1 -1)"/>
+  </g>
   <g opacity="0.4" filter="url(#ripple)">
-    <g transform="translate(860 ${HORIZON + 62 + 34 * 0.62}) scale(1 -1) translate(-860 ${-(HORIZON + 62 + 34 * 0.62)})">${boat(860, HORIZON + 62, 0.62)}</g>
+    <g transform="translate(0 ${2 * (BOAT_Y + 34 * 0.6)}) scale(1 -1)">${boat(BOAT_X, BOAT_Y, 0.6)}</g>
   </g>
   <rect x="0" y="${WATERLINE}" width="${W}" height="${H - WATERLINE}" fill="url(#deepen)"/>
   ${ripples}`;
@@ -380,8 +430,11 @@ const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" 
   ${sky()}
   ${sea()}
   ${land()}
-  <g id="boats">${boat(860, HORIZON + 62, 0.62)}${boat(960, HORIZON + 14, 0.3)}</g>
+  ${boat(985, HORIZON + 12, 0.26)}
   ${reflection()}
+  ${islet()}
+  ${tower()}
+  ${boat(BOAT_X, BOAT_Y, 0.6)}
   ${title()}
   <rect x="0" y="0" width="${W}" height="${H}" filter="url(#grain)" opacity="0.3"/>
   <path d="M0 0 H${W} V${H} H0 Z M${M} ${M} V${H - M} H${W - M} V${M} Z" fill-rule="evenodd" fill="${C.paper}"/>
